@@ -1,0 +1,149 @@
+####################### alpha (Shannon) and beta diversity indexes ##############
+############## Mosquito, Bacteria and mating pair's choice ######################
+################################ Data-GNAMBANI###################################
+##### Packages
+require(questionr)
+require(dplyr)
+require(fossil)
+require(vegan)
+library(tidyverse)
+
+## Data importation
+library(readxl)
+library(ggplot2)
+View(Data_Bacterial_Swarms)
+attach(Data_Bacterial_Swarms)
+
+##########repertoire <- ("C:/Users/hp/Desktop/Documents_Jacques_GNAMBANI")#######
+getwd()
+setwd(repertoire)
+readLines("raw_data.txt",n=5)
+ms <- read.table("raw_data.txt",header = T,dec=".",sep="\t")
+View(ms)
+dput(colnames(ms))
+
+c("ID", "Periodes", "Samples",
+  "Marker", "Mosquito", "Couples", 
+  "Sex", "Sex_inse", "Organs",
+  "Insemination", "Bacterial",
+  "Genus", 
+  "Class")
+### Outline ###
+
+
+#########
+richness <- function(x){sum(x>0)}
+
+
+shannon <- function(x){
+  rabund <- x[x>0]/sum(x)
+  -sum(rabund * log(rabund))}
+
+simpson <- function(x){
+  n <- sum(x)
+  1 - sum((x/n)^2)}
+
+##########
+
+############## Alpha diversity (basic diversity indices) 
+
+## per mosquito species
+
+gc <- ms %>%
+  select(Marker,Genus) %>%
+  group_by(Marker)%>%
+  count(Genus)
+gc
+
+gc %>%
+  group_by(Marker) %>%
+  summarize(relabund = richness(n),
+            shannon = shannon(n),
+            simpson = simpson(n),
+            invsimpson = 1/simpson,
+            counts = sum(n))
+
+######
+
+####### per mosquito, marker
+
+rd <- ms %>%
+  select(Sex,Marker,Genus) %>%
+  group_by(Sex,Marker,Genus)%>%
+  count(Genus)
+
+rd
+
+rd %>%
+  group_by(Sex,Marker) %>%
+  summarize(relabund = richness(n),
+            shannon = shannon(n),
+            simpson = simpson(n),
+            invsimpson = 1/simpson,
+            counts = sum(n))
+#%>% pivot_longer(cols=c(relabund, shannon, invsimpson, simpson),
+          #names_to="metric") %>%
+  #ggplot(aes(x=n, y=value)) +
+  #geom_point() +
+  #geom_smooth() +
+  #facet_wrap(~metric, nrow=4, scales="free_y")
+
+
+# Female Ecological characteristics Inseminated
+# alpha diversity of mosquito depending to 
+# marker and insemination
+femal <- subset(ms,Sex=="F")
+femal
+
+EC <- femal %>%
+  select(Marker,Sex,Genus) %>%
+  group_by(Marker,Sex)%>%
+  count(Genus)
+
+EC
+
+
+EC %>%
+  group_by(Sex) %>%
+  summarize(sobs = richness(n),
+            shannon = shannon(n),
+            simpson = simpson(n),
+            invsimpson = 1/simpson,
+            n = sum(n))
+
+
+
+####  Beta Diversity Measures and Calculations
+
+## Jaccard index 
+## mosquito species depending to genus
+tb <- table(ms$Mosquito,ms$Class)
+jc <- vegdist(tb,"jaccard")
+jc
+
+## interpretation 
+#Developed by Paul Jaccard, 
+#the index ranges from 0 to 1. 
+#The closer to 1,
+#the more similar the two sets of data.
+#If two datasets share the exact same members, 
+#their Jaccard Similarity Index will be 1.
+#Conversely, if they have no members in common
+#then their similarity will be 0
+
+###Exemple: L'indice de similarité Jaccard s'avère être de 0,142857 .
+###Étant donné que ce nombre est assez faible, 
+###cela indique que les deux ensembles sont assez différents.
+
+## Bray Curtis Dissimilarity
+
+tb <- table(ms$Couples,ms$Genus)
+br <- vegdist(tb,"bray")*100
+br
+
+## interpretation
+
+# The Bray-Curtis dissimilarity is always a
+# number between 0 and 1. If 0, 
+# the two sites share all the same genus;
+# if 1, they don't share any genus.
